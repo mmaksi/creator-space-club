@@ -1,7 +1,7 @@
 {
-    "name": "auth-service",
+    "name": "creator-space-club-api",
     "version": "1.0.0",
-    "description": "Authentication microservice using JWT and Google OAuth",
+    "description": "Creator Space Club Backend",
     "main": "index.js",
     "scripts": {
         "test": "cross-env NODE_ENV=test jest --watchAll --detectOpenHandles --no-cache",
@@ -24,7 +24,7 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/mmaksi/event-exchange.git"
+        "url": "git+https://github.com/mmaksi/creator-space-club.git"
     },
     "keywords": [
         "auth",
