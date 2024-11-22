@@ -1,36 +1,25 @@
 import { sendResetEmail } from '../../services/nodemailer';
-import { IrefreshTokensStoreItem, User } from './users.mongo';
+import { User } from './users.mongo';
 import crypto from 'crypto';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import { Password } from '../../lib/password';
 import { BadRequestError } from '../../errors/bad-request.error';
 import { ServerError } from '../../errors/server.error';
 import { UnauthorizedError } from '../../errors/unauthorized.error';
+import { ForbiddenError } from '../../errors/forbidden.error';
 
 // TODO store refresh tokens in a redis database
-const refreshTokensStore = [] as IrefreshTokensStoreItem[];
+let refreshTokensStore = [] as string[];
 
-function generateAccessToken(id: string) {
+function generateAccessToken(userId: string) {
     const accessTokenSecret = process.env.ACCESS_TOKEN;
-    if (!accessTokenSecret) {
-        throw new Error('Missing ACCESS_TOKEN environment variables.');
-    }
-    const accessToken = jwt.sign({ id }, accessTokenSecret, {
-        expiresIn: '15m',
-    });
+    const accessToken = jwt.sign({ userId, type: 'access' }, accessTokenSecret!, { expiresIn: '10m' });
     return accessToken;
 }
 
-function generateRefreshToken(userId: string, sessionStart?: number) {
-    const sessionIssuedAt = sessionStart || Math.floor(Date.now() / 1000);
-    const token = crypto.randomBytes(64).toString('hex');
-    // Persist refresh tokens with associated sessionStart
-    const refreshToken = {
-        userId,
-        token,
-        sessionStart: sessionIssuedAt,
-        expiresAt: sessionIssuedAt + parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN!, 10),
-    };
+function generateRefreshToken(userId: string) {
+    const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET;
+    const refreshToken = jwt.sign({ userId, type: 'refresh' }, refreshTokenSecret!);
     refreshTokensStore.push(refreshToken);
     return refreshToken;
 }
@@ -42,7 +31,6 @@ export async function signUp(email: string, password: string, confirmPassword: s
     if (existingUser) throw new BadRequestError('Email already in use');
 
     const newUser = User.build({ email, password });
-    await newUser.save();
 
     const userAccessToken = generateAccessToken(JSON.stringify(newUser._id));
     const userRefreshToken = generateRefreshToken(JSON.stringify(newUser._id));
@@ -58,13 +46,16 @@ export async function signIn(email: string, password: string) {
     const userAccessToken = generateAccessToken(existingUser.id);
     const userRefreshToken = generateRefreshToken(existingUser.id);
 
-    return { existingUser, userAccessToken, userRefreshToken };
+    return {
+        user: existingUser,
+        accessToken: userAccessToken,
+        refreshToken: userRefreshToken,
+    };
 }
 
-export async function signOut(refreshToken: IrefreshTokensStoreItem) {
-    // Remove refresh token from store
-    const index = refreshTokensStore.indexOf(refreshToken);
-    refreshTokensStore.splice(index, 1);
+export async function signOut(refreshToken: string) {
+    if (!refreshToken) throw new UnauthorizedError('Refresh Token missing');
+    refreshTokensStore = refreshTokensStore.filter((token) => token !== refreshToken);
     return;
 }
 
@@ -109,31 +100,22 @@ export async function resetPassword(token: string, newPassword: string) {
     await user.save();
 }
 
-export async function refreshToken(userRefreshToken: IrefreshTokensStoreItem) {
-    if (!userRefreshToken) throw new UnauthorizedError('Refresh Token missing');
-
-    // Check if token exists in store
-    const tokenData = refreshTokensStore.find((t) => t.userId === userRefreshToken.userId);
-    if (!tokenData) throw new UnauthorizedError('Refresh token not found');
-
-    // Calculate session duration
-    const currentTime = Math.floor(Date.now() / 1000);
-
-    if (currentTime > tokenData.expiresAt) {
-        // Session has expired; require re-authentication
-        // Remove the expired refresh token from the store
-        const oldRefreshToken = refreshTokensStore.indexOf(userRefreshToken);
-        refreshTokensStore.splice(oldRefreshToken, 1);
-        throw new UnauthorizedError('Session has expired. Please log in again.');
+export async function refreshToken(refreshToken: string) {
+    if (!refreshToken) throw new ForbiddenError();
+    if (!refreshTokensStore.includes(refreshToken)) throw new UnauthorizedError('Unauthorized');
+    // Verify refresh token
+    try {
+        const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!) as JwtPayload;
+        // Generate new tokens
+        const newAccessToken = generateAccessToken(decoded.userId);
+        const newRefreshToken = generateRefreshToken(decoded.userId);
+        // TODO delete old refresh token from the store
+        return { newAccessToken, newRefreshToken };
+    } catch (error) {
+        if (error instanceof jwt.JsonWebTokenError) {
+            throw new UnauthorizedError('Invalid refresh token.');
+        } else if (error instanceof jwt.TokenExpiredError) {
+            throw new UnauthorizedError('Refresh token has expired.');
+        } else throw new UnauthorizedError('Token verification failed.');
     }
-
-    // Generate new tokens
-    const newAccessToken = generateAccessToken(tokenData.userId);
-    const newRefreshToken = generateRefreshToken(tokenData.userId, tokenData.sessionStart);
-
-    // Remove old refresh token
-    const oldRefreshToken = refreshTokensStore.indexOf(userRefreshToken);
-    refreshTokensStore.splice(oldRefreshToken, 1);
-
-    return { newAccessToken, newRefreshToken };
 }

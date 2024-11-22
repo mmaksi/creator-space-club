@@ -33,13 +33,6 @@ export default [
                     allow: ['warn', 'error'],
                 },
             ],
-            'no-restricted-syntax': [
-                'warn',
-                {
-                    selector: 'CallExpression[callee.object.name="console"][callee.property.name="warn"]',
-                    message: 'Using console.warn() should be avoided',
-                },
-            ],
         },
     },
 ];

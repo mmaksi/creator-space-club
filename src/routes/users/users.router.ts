@@ -8,7 +8,7 @@ import {
     httpResetPassword,
     httpRefreshToken,
 } from './users.controller';
-import { signinValidator, signupValidator } from '../../lib/request-validator.middleware';
+import { signinValidator, signupValidator } from '../../lib/request-validator';
 import { requireAuth } from '../../middlewares/require-auth';
 import { currentUser } from '../../middlewares/current-user';
 import { validateRequest } from '../../middlewares/request-validator';

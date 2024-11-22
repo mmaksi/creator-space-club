@@ -11,11 +11,11 @@ export async function httpSignup(req: Request, res: Response) {
 
 export async function httpSignin(req: Request, res: Response) {
     const { email, password } = req.body;
-    const { existingUser, userAccessToken, userRefreshToken } = await signIn(email, password);
+    const { user, accessToken, refreshToken } = await signIn(email, password);
     // Store user's JWT in the cookie
-    req.session!.accessToken = userAccessToken;
-    req.session!.refreshToken = userRefreshToken;
-    return res.status(200).json(existingUser);
+    req.session!.accessToken = accessToken;
+    req.session!.refreshToken = refreshToken;
+    return res.status(200).json(user);
 }
 
 export async function httpGetCurrentUser(req: Request, res: Response) {
@@ -23,7 +23,7 @@ export async function httpGetCurrentUser(req: Request, res: Response) {
 }
 
 export async function httpSignOut(req: Request, res: Response) {
-    const refreshToken = req.session!.refreshToken;
+    const refreshToken = req.session!.refreshToken || req.body.refreshToken;
     await signOut(refreshToken);
     // Clear the session after removing refresh token from the DB
     req.session = null;
@@ -48,7 +48,7 @@ export async function httpResetPassword(req: Request, res: Response) {
 }
 
 export async function httpRefreshToken(req: Request, res: Response) {
-    const userRefreshToken = req.session!.refreshToken;
+    const userRefreshToken = req.session!.refreshToken || req.body.refreshToken;
     const { newAccessToken, newRefreshToken } = await refreshToken(userRefreshToken);
     // Update tokens in cookies
     req.session!.accessToken = newAccessToken;

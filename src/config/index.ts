@@ -10,6 +10,7 @@ interface IConfig {
     env: string;
     isProduction: boolean;
     port: number;
+    jwtSecret: string;
     mailgun: {
         key: string;
         domain: string;
@@ -25,8 +26,24 @@ interface IConfig {
 
 const validateEnvVariables = (envVars: NodeJS.ProcessEnv): void => {
     const required = {
-        production: ['MAILGUN_API_KEY', 'MAILGUN_DOMAIN', 'MAILGUN_LIST', 'POSTGRES_URL'],
-        development: ['DEV_MAILGUN_API_KEY', 'DEV_MAILGUN_DOMAIN', 'DEV_MAILGUN_LIST', 'DEV_POSTGRES_URL'],
+        production: [
+            'MAILGUN_API_KEY',
+            'MAILGUN_DOMAIN',
+            'MAILGUN_LIST',
+            'POSTGRES_URL',
+            'DB_USERNAME',
+            'DB_PASSWORD',
+            'JWT_KEY',
+        ],
+        development: [
+            'DEV_MAILGUN_API_KEY',
+            'DEV_MAILGUN_DOMAIN',
+            'DEV_MAILGUN_LIST',
+            'DEV_POSTGRES_URL',
+            'DEV_DB_USERNAME',
+            'DEV_DB_PASSWORD',
+            'DEV_JWT_KEY',
+        ],
     };
 
     const environment = envVars.NODE_ENV || 'development';
@@ -52,6 +69,7 @@ const getConfig = (): IConfig => {
         env: environment,
         isProduction,
         port: parseInt(isProduction ? process.env.SERVER_PORT || process.env.PORT || '8080' : '4000', 10),
+        jwtSecret: isProduction ? process.env.DEV_JWT_KEY! : process.env.JWT_KEY!,
         mailgun: {
             key: isProduction ? process.env.MAILGUN_API_KEY! : process.env.DEV_MAILGUN_API_KEY!,
             domain: isProduction ? process.env.MAILGUN_DOMAIN! : process.env.DEV_MAILGUN_DOMAIN!,
