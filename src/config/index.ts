@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Load environment variables based on NODE_ENV
 import path from 'path';
 import dotenv from 'dotenv';
@@ -5,7 +6,7 @@ const environment = process.env.NODE_ENV || 'development';
 const envFile = environment === 'production' ? '.env.production' : '.env.development';
 dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 
-interface Config {
+interface IConfig {
     env: string;
     isProduction: boolean;
     port: number;
@@ -41,7 +42,7 @@ const validateEnvVariables = (envVars: NodeJS.ProcessEnv): void => {
     }
 };
 
-const getConfig = (): Config => {
+const getConfig = (): IConfig => {
     validateEnvVariables(process.env);
 
     const environment = process.env.NODE_ENV || 'development';

@@ -1,12 +1,14 @@
-import { BadRequestError, ServerError, UnauthorizedError } from '@eventexchange/common';
 import { sendResetEmail } from '../../services/nodemailer';
 import { IrefreshTokensStoreItem, User } from './users.mongo';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { Password } from '../../lib/password';
+import { BadRequestError } from '../../errors/bad-request.error';
+import { ServerError } from '../../errors/server.error';
+import { UnauthorizedError } from '../../errors/unauthorized.error';
 
 // TODO store refresh tokens in a redis database
-let refreshTokensStore = [] as IrefreshTokensStoreItem[];
+const refreshTokensStore = [] as IrefreshTokensStoreItem[];
 
 function generateAccessToken(id: string) {
     const accessTokenSecret = process.env.ACCESS_TOKEN;
@@ -81,7 +83,7 @@ export async function forgotPassword(email: string) {
         try {
             // Send the unhashed resetToken via email
             return await sendResetEmail(email, resetToken);
-        } catch (error) {
+        } catch {
             throw new ServerError('Error sending email');
         }
     }
@@ -116,7 +118,6 @@ export async function refreshToken(userRefreshToken: IrefreshTokensStoreItem) {
 
     // Calculate session duration
     const currentTime = Math.floor(Date.now() / 1000);
-    const sessionDuration = currentTime - tokenData.sessionStart;
 
     if (currentTime > tokenData.expiresAt) {
         // Session has expired; require re-authentication
