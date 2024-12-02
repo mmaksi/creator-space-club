@@ -15,7 +15,7 @@
         "validate:env": "ts-node ./src/scripts/validate-env.ts",
         "deploy": "npm run validate:env && npm run build && npm run start",
         "migrate:make": "knex migrate:make",
-        "migrate:latest": "knex migrate:latest",
+        "migrate:latest": "npx knex migrate:latest",
         "migrate:rollback": "knex migrate:rollback",
         "migrate:status": "knex migrate:status",
         "db:seed": "knex seed:run"

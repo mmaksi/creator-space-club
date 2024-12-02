@@ -5,20 +5,21 @@ interface IUser {
     id: string;
     email: string;
     password: string;
+    refreshToken: string | null;
     resetPasswordToken: string;
     resetPasswordExpires: number;
 }
 
 class UserModel {
     async createUser(user: Partial<IUser>): Promise<IUser> {
-        const [newUser] = await db('users')
+        const { email, password: hashedPassword } = user;
+        const newUser = (await db('users')
             .insert({
-                email: user.email,
-                password: user.password,
+                email,
+                password: hashedPassword,
             })
-            .returning('*');
-
-        return newUser as IUser;
+            .returning('*')) as IUser[];
+        return newUser[0] as IUser;
     }
 
     async findUserByEmail(email: string): Promise<IUser | null> {

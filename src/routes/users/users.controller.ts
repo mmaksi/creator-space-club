@@ -41,7 +41,7 @@ export async function httpSignOut(req: Request, res: Response) {
     await signOut(refreshToken);
     // Clear the session after removing refresh token from the DB
     req.session = null;
-    return res.status(200).json({});
+    return res.status(200).json({ message: 'Signed out successfully' });
 }
 
 export async function httpForgotPassword(req: Request, res: Response) {

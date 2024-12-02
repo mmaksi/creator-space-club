@@ -7,7 +7,7 @@ import { connectToRDS } from './services/rds-postgres';
 const start = async () => {
     const port = config.port || 4000;
     await connectToRDS();
-    app.listen(port, () => console.log(`Server running on port ${port}`));
+    app.listen(port, () => console.log(`Server running on port ${port}...`));
 };
 
 start();

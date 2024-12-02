@@ -24,7 +24,6 @@ export const currentUser = (req: Request, res: Response, next: NextFunction) => 
     }
     try {
         const payload = jwt.verify(req.session.accessToken, config.jwt.accessToken) as IUserPayload;
-        console.warn({ payload });
         req.currentUser = payload;
         next();
     } catch (error) {

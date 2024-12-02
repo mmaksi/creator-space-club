@@ -8,20 +8,24 @@ import { UnauthorizedError } from '../../errors/unauthorized.error';
 import { ForbiddenError } from '../../errors/forbidden.error';
 import { config } from '../../config';
 import User from './users.postgres';
+import { db } from '../../services/rds-postgres';
 
-// TODO store refresh tokens in a redis database
-let refreshTokensStore = [] as string[];
 const accessTokenSecret = config.jwt.accessToken;
 const refreshTokenSecret = config.jwt.refreshToken;
 
-function generateAccessToken(userId: string) {
+function generateAccessToken(userId: string): string {
     const accessToken = jwt.sign({ userId, type: 'access' }, accessTokenSecret!, { expiresIn: '10m' });
     return accessToken;
 }
 
-function generateRefreshToken(userId: string) {
-    const refreshToken = jwt.sign({ userId, type: 'refresh' }, refreshTokenSecret!);
-    refreshTokensStore.push(refreshToken);
+async function generateRefreshToken(userId: string): Promise<string> {
+    const refreshToken = jwt.sign({ userId, type: 'refresh' }, refreshTokenSecret!, { expiresIn: '7d' });
+    // add refresh token to the store
+    await db('refreshTokens').insert({
+        user_id: userId,
+        token: refreshToken,
+        expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
+    });
     return refreshToken;
 }
 
@@ -31,10 +35,11 @@ export async function signUp(email: string, password: string, confirmPassword: s
     const existingUser = await User.findUserByEmail(email);
     if (existingUser) throw new BadRequestError('Email already in use');
 
-    const newUser = await User.createUser({ email, password });
+    const hashedPassword = await Password.toHash(password);
+    const newUser = await User.createUser({ email, password: hashedPassword });
 
-    const userAccessToken = generateAccessToken(JSON.stringify(newUser.id));
-    const userRefreshToken = generateRefreshToken(JSON.stringify(newUser.id));
+    const userAccessToken = generateAccessToken(newUser.id);
+    const userRefreshToken = await generateRefreshToken(newUser.id);
 
     return { newUser, userAccessToken, userRefreshToken };
 }
@@ -45,7 +50,7 @@ export async function signIn(email: string, password: string) {
         throw new UnauthorizedError('Invalid credentials');
     }
     const userAccessToken = generateAccessToken(existingUser.id);
-    const userRefreshToken = generateRefreshToken(existingUser.id);
+    const userRefreshToken = await generateRefreshToken(existingUser.id);
 
     return {
         user: existingUser,
@@ -56,7 +61,7 @@ export async function signIn(email: string, password: string) {
 
 export async function signOut(refreshToken: string) {
     if (!refreshToken) throw new UnauthorizedError('Refresh Token missing');
-    refreshTokensStore = refreshTokensStore.filter((token) => token !== refreshToken);
+    await db('refreshTokens').where({ token: refreshToken }).delete();
     return;
 }
 
@@ -103,15 +108,17 @@ export async function forgotPassword(email: string) {
 // }
 
 export async function refreshToken(refreshToken: string) {
-    if (!refreshToken) throw new ForbiddenError();
-    if (!refreshTokensStore.includes(refreshToken)) throw new UnauthorizedError('Unauthorized');
+    if (!refreshToken) throw new UnauthorizedError('Refresh Token missing');
+    // check if the refresh token does not exist in the store in the database
+    const refreshTokenRecord = await db('refreshTokens').where({ token: refreshToken }).first();
+    if (!refreshTokenRecord) throw new ForbiddenError();
     // Verify refresh token
     try {
         const decoded = jwt.verify(refreshToken, config.jwt.refreshToken) as JwtPayload;
         // Generate new tokens
         const newAccessToken = generateAccessToken(decoded.userId);
-        const newRefreshToken = generateRefreshToken(decoded.userId);
-        // TODO delete old refresh token from the store
+        const newRefreshToken = await generateRefreshToken(decoded.userId);
+        await db('refreshTokens').where({ token: refreshToken }).delete();
         return { newAccessToken, newRefreshToken };
     } catch (error) {
         if (error instanceof jwt.JsonWebTokenError) {
