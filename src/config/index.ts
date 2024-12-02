@@ -10,14 +10,18 @@ interface IConfig {
     env: string;
     isProduction: boolean;
     port: number;
-    jwtSecret: string;
+    jwt: {
+        accessToken: string;
+        refreshToken: string;
+    };
     mailgun: {
         key: string;
         domain: string;
         list: string;
     };
     postgres: {
-        uri: string;
+        host: string;
+        db_name: string;
         username: string;
         password: string;
     };
@@ -32,17 +36,21 @@ const validateEnvVariables = (envVars: NodeJS.ProcessEnv): void => {
             'MAILGUN_LIST',
             'POSTGRES_URL',
             'DB_USERNAME',
+            'DB_NAME',
             'DB_PASSWORD',
-            'JWT_KEY',
+            'JWT_ACCESS_KEY',
+            'JWT_REFRESH_KEY',
         ],
         development: [
             'DEV_MAILGUN_API_KEY',
             'DEV_MAILGUN_DOMAIN',
             'DEV_MAILGUN_LIST',
-            'DEV_POSTGRES_URL',
-            'DEV_DB_USERNAME',
-            'DEV_DB_PASSWORD',
-            'DEV_JWT_KEY',
+            'DEV_URL',
+            'DEV_NAME',
+            'DEV_USERNAME',
+            'DEV_PASSWORD',
+            'DEV_JWT_ACCESS_KEY',
+            'DEV_JWT_REFRESH_KEY',
         ],
     };
 
@@ -69,16 +77,20 @@ const getConfig = (): IConfig => {
         env: environment,
         isProduction,
         port: parseInt(isProduction ? process.env.SERVER_PORT || process.env.PORT || '8080' : '4000', 10),
-        jwtSecret: isProduction ? process.env.DEV_JWT_KEY! : process.env.JWT_KEY!,
+        jwt: {
+            accessToken: isProduction ? process.env.JWT_ACCESS_KEY! : process.env.DEV_JWT_ACCESS_KEY!,
+            refreshToken: isProduction ? process.env.JWT_REFRESH_KEY! : process.env.DEV_JWT_REFRESH_KEY!,
+        },
         mailgun: {
             key: isProduction ? process.env.MAILGUN_API_KEY! : process.env.DEV_MAILGUN_API_KEY!,
             domain: isProduction ? process.env.MAILGUN_DOMAIN! : process.env.DEV_MAILGUN_DOMAIN!,
             list: isProduction ? process.env.MAILGUN_LIST! : process.env.DEV_MAILGUN_LIST!,
         },
         postgres: {
-            uri: isProduction ? process.env.DEV_POSTGRES_URL! : process.env.POSTGRES_URL!,
-            username: isProduction ? process.env.DEV_DB_USERNAME! : process.env.POSTGRES_URL!,
-            password: isProduction ? process.env.DEV_DB_PASSWORD! : process.env.POSTGRES_URL!,
+            host: isProduction ? process.env.URL! : process.env.DEV_URL!,
+            db_name: isProduction ? process.env.NAME! : process.env.DEV_NAME!,
+            username: isProduction ? process.env.USERNAME! : process.env.DEV_USERNAME!,
+            password: isProduction ? process.env.PASSWORD! : process.env.DEV_PASSWORD!,
         },
     };
 };

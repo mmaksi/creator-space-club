@@ -23,7 +23,8 @@ export const currentUser = (req: Request, res: Response, next: NextFunction) => 
         return next();
     }
     try {
-        const payload = jwt.verify(req.session.accessToken, config.jwtSecret) as IUserPayload;
+        const payload = jwt.verify(req.session.accessToken, config.jwt.accessToken) as IUserPayload;
+        console.warn({ payload });
         req.currentUser = payload;
         next();
     } catch (error) {

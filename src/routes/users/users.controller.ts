@@ -1,12 +1,26 @@
 import { Request, Response } from 'express';
-import { signUp, signIn, signOut, forgotPassword, resetPassword, refreshToken } from '../../models/users/users.model';
+import { signUp, signIn, signOut, forgotPassword, refreshToken } from '../../models/users/users.model';
+
+interface IUserPayload {
+    userId: string;
+    type: string;
+    exp: number;
+    iat: number;
+}
+declare global {
+    namespace Express {
+        interface Request {
+            currentUser?: IUserPayload;
+        }
+    }
+}
 
 export async function httpSignup(req: Request, res: Response) {
     const { email, password, confirmPassword } = req.body;
-    const { newUser: user, userAccessToken, userRefreshToken } = await signUp(email, password, confirmPassword);
+    const { newUser, userAccessToken, userRefreshToken } = await signUp(email, password, confirmPassword);
     req.session!.accessToken = userAccessToken;
     req.session!.refreshToken = userRefreshToken;
-    return res.status(201).json(user);
+    return res.status(201).json({ user: newUser });
 }
 
 export async function httpSignin(req: Request, res: Response) {
@@ -38,14 +52,14 @@ export async function httpForgotPassword(req: Request, res: Response) {
         .json('If your email exists in our database, you will get a reset password link on your inbox soon.');
 }
 
-export async function httpResetPassword(req: Request, res: Response) {
-    const { token } = req.params;
-    const { newPassword } = req.body;
+// export async function httpResetPassword(req: Request, res: Response) {
+//     const { token } = req.params;
+//     const { newPassword } = req.body;
 
-    await resetPassword(token, newPassword);
+//     await resetPassword(token, newPassword);
 
-    return res.send('Password has been reset');
-}
+//     return res.send('Password has been reset');
+// }
 
 export async function httpRefreshToken(req: Request, res: Response) {
     const userRefreshToken = req.session!.refreshToken || req.body.refreshToken;

@@ -13,7 +13,12 @@
         "env:dev": "node scripts/setup-env.js development",
         "env:prod": "node scripts/setup-env.js production",
         "validate:env": "ts-node ./src/scripts/validate-env.ts",
-        "deploy": "npm run validate:env && npm run build && npm run start"
+        "deploy": "npm run validate:env && npm run build && npm run start",
+        "migrate:make": "knex migrate:make",
+        "migrate:latest": "knex migrate:latest",
+        "migrate:rollback": "knex migrate:rollback",
+        "migrate:status": "knex migrate:status",
+        "db:seed": "knex seed:run"
     },
     "jest": {
         "preset": "ts-jest",
@@ -53,6 +58,7 @@
         "helmet": "^7.2.0",
         "hpp": "^0.2.3",
         "jsonwebtoken": "^9.0.2",
+        "knex": "^3.1.0",
         "mailgun.js": "^10.2.3",
         "mongoose": "^8.8.2",
         "morgan": "^1.10.0",

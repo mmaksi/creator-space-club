@@ -10,20 +10,20 @@ import cors from 'cors';
 import hpp from 'hpp';
 
 export const app = express();
+const sessionOptions = {
+    httpOnly: true,
+    signed: false,
+    secure: process.env.NODE_ENV !== 'test',
+};
+
+app.set('trust proxy', 1);
 
 app.use(requestLogger);
 app.use(helmet());
 app.use(hpp());
 app.use(cors());
-app.set('trust proxy', 1);
 app.use(express.json());
-app.use(
-    cookieSession({
-        httpOnly: true,
-        signed: false,
-        secure: process.env.NODE_ENV !== 'test',
-    })
-);
+app.use(cookieSession(sessionOptions));
 app.use('/api', api);
 app.use(errorHandler);
 app.use(errorLogger);
