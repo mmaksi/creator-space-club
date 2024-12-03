@@ -9,6 +9,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import hpp from 'hpp';
 import { config } from './config';
+import { rateLimiterMiddleware } from './middlewares/rateLimiter';
 
 export const app = express();
 const sessionOptions = {
@@ -26,6 +27,7 @@ app.use(hpp());
 app.use(cors());
 app.use(express.json());
 app.use(cookieSession(sessionOptions));
+app.use(rateLimiterMiddleware);
 app.use('/api', api);
 
 // app.use(errorLogger);
