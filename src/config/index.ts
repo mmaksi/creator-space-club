@@ -10,6 +10,10 @@ interface IConfig {
     env: string;
     isProduction: boolean;
     port: number;
+    session: {
+        secret1: string;
+        secret2: string;
+    };
     jwt: {
         accessToken: string;
         refreshToken: string;
@@ -40,6 +44,8 @@ const validateEnvVariables = (envVars: NodeJS.ProcessEnv): void => {
             'DB_PASSWORD',
             'JWT_ACCESS_KEY',
             'JWT_REFRESH_KEY',
+            'SESSION_SECRET_1',
+            'SESSION_SECRET_2',
         ],
         development: [
             'DEV_MAILGUN_API_KEY',
@@ -51,6 +57,8 @@ const validateEnvVariables = (envVars: NodeJS.ProcessEnv): void => {
             'DEV_PASSWORD',
             'DEV_JWT_ACCESS_KEY',
             'DEV_JWT_REFRESH_KEY',
+            'DEV_SESSION_SECRET_1',
+            'DEV_SESSION_SECRET_2',
         ],
     };
 
@@ -77,6 +85,10 @@ const getConfig = (): IConfig => {
         env: environment,
         isProduction,
         port: parseInt(isProduction ? process.env.SERVER_PORT || process.env.PORT || '8080' : '4000', 10),
+        session: {
+            secret1: isProduction ? process.env.SESSION_SECRET_1! : process.env.DEV_SESSION_SECRET_1!,
+            secret2: isProduction ? process.env.SESSION_SECRET_2! : process.env.DEV_SESSION_SECRET_2!,
+        },
         jwt: {
             accessToken: isProduction ? process.env.JWT_ACCESS_KEY! : process.env.DEV_JWT_ACCESS_KEY!,
             refreshToken: isProduction ? process.env.JWT_REFRESH_KEY! : process.env.DEV_JWT_REFRESH_KEY!,

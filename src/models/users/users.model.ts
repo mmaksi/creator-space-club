@@ -3,7 +3,6 @@ import crypto from 'crypto';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import { Password } from '../../lib/password';
 import { BadRequestError } from '../../errors/bad-request.error';
-import { ServerError } from '../../errors/server.error';
 import { UnauthorizedError } from '../../errors/unauthorized.error';
 import { ForbiddenError } from '../../errors/forbidden.error';
 import { config } from '../../config';
@@ -14,25 +13,30 @@ const accessTokenSecret = config.jwt.accessToken;
 const refreshTokenSecret = config.jwt.refreshToken;
 
 function generateAccessToken(userId: string): string {
-    const accessToken = jwt.sign({ userId, type: 'access' }, accessTokenSecret!, { expiresIn: '10m' });
+    const accessToken = jwt.sign({ userId, type: 'access' }, accessTokenSecret!, { expiresIn: '1m' });
     return accessToken;
 }
 
 async function generateRefreshToken(userId: string): Promise<string> {
     const refreshToken = jwt.sign({ userId, type: 'refresh' }, refreshTokenSecret!, { expiresIn: '7d' });
+    console.warn(refreshToken);
     // add refresh token to the store
-    await db('refreshTokens').insert({
-        user_id: userId,
-        token: refreshToken,
-        expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
-    });
+    try {
+        await db('refreshTokens').insert({
+            user_id: userId,
+            token: refreshToken,
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        });
+    } catch (error) {
+        console.error(error);
+    }
     return refreshToken;
 }
 
 export async function signUp(email: string, password: string, confirmPassword: string) {
     if (password !== confirmPassword) throw new BadRequestError("Passwords don't match");
 
-    const existingUser = await User.findUserByEmail(email);
+    const existingUser = await User.findUserBy({ email });
     if (existingUser) throw new BadRequestError('Email already in use');
 
     const hashedPassword = await Password.toHash(password);
@@ -45,7 +49,7 @@ export async function signUp(email: string, password: string, confirmPassword: s
 }
 
 export async function signIn(email: string, password: string) {
-    const existingUser = await User.findUserByEmail(email);
+    const existingUser = await User.findUserBy({ email });
     if (!existingUser || !(await Password.compare(password, existingUser.password))) {
         throw new UnauthorizedError('Invalid credentials');
     }
@@ -66,64 +70,65 @@ export async function signOut(refreshToken: string) {
 }
 
 export async function forgotPassword(email: string) {
-    // Find user by email
-    const user = await User.findUserByEmail(email);
+    // Check if user exists
+    const user = await User.findUserBy({ email });
     if (user) {
-        // Generate a reset token
+        // Generate a secure token
         const resetToken = crypto.randomBytes(32).toString('hex');
+        // Hash the token
         const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        // Set expiration time
+        const expiration = new Date(Date.now() + 3600000); // Token valid for 1 hour
 
+        // Store the hashed token and expiration in the database
         await User.updateUser(user.id, {
             resetPasswordToken: hashedToken,
-            resetPasswordExpires: Date.now() + 3600000,
+            resetPasswordExpires: expiration,
         });
 
-        try {
-            // Send the unhashed resetToken via email
-            return await sendResetEmail(email, resetToken);
-        } catch {
-            throw new ServerError('Error sending email');
-        }
+        await sendResetEmail(email, resetToken);
+        return;
     }
     return;
 }
 
-// export async function resetPassword(token: string, newPassword: string) {
-//     // Hash the incoming token
-//     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+export async function resetPassword(token: string, newPassword: string) {
+    // Hash the incoming token
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
-//     // Find the user by hashed token and expiration time
-//     const user = await User.findUserByResetPasswordToken({
-//         resetPasswordToken: hashedToken,
-//         resetPasswordExpires: { $gt: Date.now() },
-//     });
+    // Find the user by hashed token and expiration time
+    const user = await User.findUserBy({
+        resetPasswordToken: hashedToken,
+    });
 
-//     if (!user) throw new BadRequestError('Invalid or expired token');
+    if (!user) throw new BadRequestError('Invalid or expired token');
 
-//     // Update password
-//     user.password = newPassword;
-//     user.resetPasswordToken = undefined;
-//     user.resetPasswordExpires = undefined;
-//     await user.save();
-// }
+    // Update password
+    user.password = newPassword;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+}
 
 export async function refreshToken(refreshToken: string) {
     if (!refreshToken) throw new UnauthorizedError('Refresh Token missing');
-    // check if the refresh token does not exist in the store in the database
+    // check if the refresh token does not exist in the database
     const refreshTokenRecord = await db('refreshTokens').where({ token: refreshToken }).first();
     if (!refreshTokenRecord) throw new ForbiddenError();
-    // Verify refresh token
     try {
+        // Verify refresh token
         const decoded = jwt.verify(refreshToken, config.jwt.refreshToken) as JwtPayload;
         // Generate new tokens
         const newAccessToken = generateAccessToken(decoded.userId);
         const newRefreshToken = await generateRefreshToken(decoded.userId);
+        // Remove the old expired refresh token
         await db('refreshTokens').where({ token: refreshToken }).delete();
+        // Return the new tokens
         return { newAccessToken, newRefreshToken };
     } catch (error) {
         if (error instanceof jwt.JsonWebTokenError) {
             throw new UnauthorizedError('Invalid refresh token.');
         } else if (error instanceof jwt.TokenExpiredError) {
+            await db('refreshTokens').where({ token: refreshToken }).delete();
             throw new UnauthorizedError('Refresh token has expired.');
         } else throw new UnauthorizedError('Token verification failed.');
     }

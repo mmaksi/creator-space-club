@@ -5,9 +5,8 @@ interface IUser {
     id: string;
     email: string;
     password: string;
-    refreshToken: string | null;
-    resetPasswordToken: string;
-    resetPasswordExpires: number;
+    resetPasswordToken: string | null;
+    resetPasswordExpires: Date | null;
 }
 
 class UserModel {
@@ -22,8 +21,8 @@ class UserModel {
         return newUser[0] as IUser;
     }
 
-    async findUserByEmail(email: string): Promise<IUser | null> {
-        const [user] = await db('users').select('*').where({ email }).limit(1);
+    async findUserBy(query: Partial<IUser>): Promise<IUser | null> {
+        const [user] = await db('users').select('*').where(query).limit(1);
 
         return user || null;
     }

@@ -1,10 +1,12 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 
 export async function up(knex: Knex): Promise<void> {
     return knex.schema.createTable('users', (table) => {
         table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
         table.string('email').unique().notNullable();
         table.string('password').notNullable();
+        table.string('resetPasswordToken');
+        table.date('resetPasswordExpires');
         // table.string('first_name');
         // table.string('last_name');
         // table.boolean('is_active').defaultTo(true);

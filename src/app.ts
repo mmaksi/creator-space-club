@@ -13,7 +13,8 @@ import { config } from './config';
 export const app = express();
 const sessionOptions = {
     httpOnly: true,
-    signed: false,
+    signed: true,
+    keys: [config.session.secret1, config.session.secret2],
     secure: config.isProduction,
 };
 
