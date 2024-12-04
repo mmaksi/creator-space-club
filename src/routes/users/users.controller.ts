@@ -1,20 +1,6 @@
 import { Request, Response } from 'express';
 import { signUp, signIn, signOut, forgotPassword, refreshToken, resetPassword } from '../../models/users/users.model';
 
-interface IUserPayload {
-    userId: string;
-    type: string;
-    exp: number;
-    iat: number;
-}
-declare global {
-    namespace Express {
-        interface Request {
-            currentUser?: IUserPayload;
-        }
-    }
-}
-
 export async function httpSignup(req: Request, res: Response) {
     const { email, password, confirmPassword } = req.body;
     const { newUser, userAccessToken, userRefreshToken } = await signUp(email, password, confirmPassword);

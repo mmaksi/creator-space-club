@@ -5,7 +5,7 @@ import { connectToRDS } from './services/rds-postgres';
 
 // Import config after loading environment variables
 const start = async () => {
-    const port = config.port || 4000;
+    const port = config.port || 3000;
     await connectToRDS();
     app.listen(port, () => console.log(`Server running on port ${port}...`));
 };

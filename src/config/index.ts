@@ -14,6 +14,10 @@ interface IConfig {
         secret1: string;
         secret2: string;
     };
+    google: {
+        clientId: string;
+        clientSecret: string;
+    };
     jwt: {
         accessToken: string;
         refreshToken: string;
@@ -35,6 +39,8 @@ interface IConfig {
 const validateEnvVariables = (envVars: NodeJS.ProcessEnv): void => {
     const required = {
         production: [
+            'GOOGLE_CLIENT_ID',
+            'GOOGLE_CLIENT_SECRET',
             'MAILGUN_API_KEY',
             'MAILGUN_DOMAIN',
             'MAILGUN_LIST',
@@ -48,6 +54,8 @@ const validateEnvVariables = (envVars: NodeJS.ProcessEnv): void => {
             'SESSION_SECRET_2',
         ],
         development: [
+            'DEV_GOOGLE_CLIENT_ID',
+            'DEV_GOOGLE_CLIENT_SECRET',
             'DEV_MAILGUN_API_KEY',
             'DEV_MAILGUN_DOMAIN',
             'DEV_MAILGUN_LIST',
@@ -84,7 +92,11 @@ const getConfig = (): IConfig => {
     return {
         env: environment,
         isProduction,
-        port: parseInt(isProduction ? process.env.SERVER_PORT || process.env.PORT || '8080' : '4000', 10),
+        port: parseInt(isProduction ? process.env.PORT || '8080' : '3000', 10),
+        google: {
+            clientId: isProduction ? process.env.GOOGLE_CLIENT_ID! : process.env.DEV_GOOGLE_CLIENT_ID!,
+            clientSecret: isProduction ? process.env.GOOGLE_CLIENT_SECRET! : process.env.DEV_GOOGLE_CLIENT_SECRET!,
+        },
         session: {
             secret1: isProduction ? process.env.SESSION_SECRET_1! : process.env.DEV_SESSION_SECRET_1!,
             secret2: isProduction ? process.env.SESSION_SECRET_2! : process.env.DEV_SESSION_SECRET_2!,

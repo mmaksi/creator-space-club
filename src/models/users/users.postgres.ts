@@ -1,13 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
+import { IUser } from '../../lib/types';
 import { db } from '../../services/rds-postgres';
-
-interface IUser {
-    id: string;
-    email: string;
-    password: string;
-    resetPasswordToken: string | null;
-    resetPasswordExpires: Date | null;
-}
 
 class UserModel {
     async createUser(user: Partial<IUser>): Promise<IUser> {

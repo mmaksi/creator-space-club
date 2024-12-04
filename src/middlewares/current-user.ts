@@ -2,18 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { UnauthorizedError } from '../errors/unauthorized.error';
-
-interface IUserPayload {
-    userId: string;
-    type: string;
-    exp: number;
-    iat: number;
-}
+import { IUser } from '../lib/types';
 
 declare global {
     namespace Express {
         interface Request {
-            currentUser?: IUserPayload;
+            currentUser?: IUser;
         }
     }
 }
@@ -23,7 +17,7 @@ export const currentUser = (req: Request, res: Response, next: NextFunction) => 
         return next();
     }
     try {
-        const payload = jwt.verify(req.session.accessToken, config.jwt.accessToken) as IUserPayload;
+        const payload = jwt.verify(req.session.accessToken, config.jwt.accessToken) as IUser;
         req.currentUser = payload;
         next();
     } catch (error) {

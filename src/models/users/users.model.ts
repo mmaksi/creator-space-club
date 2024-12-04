@@ -8,6 +8,7 @@ import { ForbiddenError } from '../../errors/forbidden.error';
 import { config } from '../../config';
 import User from './users.postgres';
 import { db } from '../../services/rds-postgres';
+import { Profile, VerifyCallback } from 'passport-google-oauth20';
 
 const accessTokenSecret = config.jwt.accessToken;
 const refreshTokenSecret = config.jwt.refreshToken;
@@ -61,6 +62,36 @@ export async function signIn(email: string, password: string) {
         accessToken: userAccessToken,
         refreshToken: userRefreshToken,
     };
+}
+
+export async function googleSignIn(accessToken: string, refreshToken: string, profile: Profile, done: VerifyCallback) {
+    console.warn(profile);
+    // const firstName = profile.name?.givenName;
+    // const lastName = profile.name?.familyName;
+    // const email = profile.emails![0].value;
+    // const provider = 'google';
+    // const profilePhoto = profile.photos![0].value;
+    // const userId = profile.id;
+    try {
+        // Check if user already exists
+        const existingUser = await User.findUserBy({ googleId: profile.id });
+
+        if (existingUser) {
+            return done(null, existingUser);
+        }
+
+        // If not, create new user
+        const newUser = await User.createUser({
+            email: profile.emails![0].value,
+            googleId: profile.id,
+            // Set a random password since it's not used with Google auth
+            password: Math.random().toString(36).slice(-8),
+        });
+        done(null, newUser);
+        // store the profile id in a cookie
+    } catch (error) {
+        done(error, undefined);
+    }
 }
 
 export async function signOut(refreshToken: string) {

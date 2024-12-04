@@ -8,18 +8,15 @@ import { errorHandler } from './middlewares/error-handler';
 import helmet from 'helmet';
 import cors from 'cors';
 import hpp from 'hpp';
-import { config } from './config';
 import { rateLimiterMiddleware } from './middlewares/rateLimiter';
+import passport from 'passport';
+import { googleStrategy } from './services/passport';
+import sessionOptions from './lib/session-options';
 
 export const app = express();
-const sessionOptions = {
-    httpOnly: true,
-    signed: true,
-    keys: [config.session.secret1, config.session.secret2],
-    secure: config.isProduction,
-};
-
 app.set('trust proxy', 1);
+
+passport.use(googleStrategy);
 
 // app.use(requestLogger);
 app.use(helmet());
@@ -29,6 +26,5 @@ app.use(express.json());
 app.use(cookieSession(sessionOptions));
 app.use(rateLimiterMiddleware);
 app.use('/api', api);
-
 // app.use(errorLogger);
 app.use(errorHandler);
