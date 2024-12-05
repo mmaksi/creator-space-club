@@ -4,13 +4,7 @@ import { db } from '../../services/rds-postgres';
 
 class UserModel {
     async createUser(user: Partial<IUser>): Promise<IUser> {
-        const { email, password: hashedPassword } = user;
-        const newUser = (await db('users')
-            .insert({
-                email,
-                password: hashedPassword,
-            })
-            .returning('*')) as IUser[];
+        const newUser = (await db('users').insert(user).returning('*')) as IUser[];
         return newUser[0] as IUser;
     }
 

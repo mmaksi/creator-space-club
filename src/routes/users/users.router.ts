@@ -12,12 +12,12 @@ import {
 import { signinValidator, signupValidator } from '../../lib/request-validator';
 import { requireAuth } from '../../middlewares/require-auth';
 import { validateRequest } from '../../middlewares/request-validator';
-import { authorizeRoles } from '../../middlewares/authorize-roles';
+// import { authorizeRoles } from '../../middlewares/authorize-roles';
 import { googleAuthenticator, googleCallback } from '../../lib/oauth';
 
 const usersRouter = express.Router();
 
-usersRouter.get('/current-user', currentUser, requireAuth, authorizeRoles(['admin']), httpGetCurrentUser);
+usersRouter.get('/current-user', currentUser, requireAuth, httpGetCurrentUser);
 usersRouter.get('/google', googleAuthenticator);
 usersRouter.get('/google/callback', googleCallback);
 usersRouter.post('/email/signup', signupValidator, validateRequest, httpSignup);

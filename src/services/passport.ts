@@ -7,6 +7,7 @@ const googleStrategy = new GoogleStrategy(
         clientID: config.google.clientId,
         clientSecret: config.google.clientSecret,
         callbackURL: '/api/auth/google/callback',
+        proxy: true,
     },
     googleSignIn
 );

@@ -3,7 +3,6 @@ import { config } from './config';
 import { app } from './app';
 import { connectToRDS } from './services/rds-postgres';
 
-// Import config after loading environment variables
 const start = async () => {
     const port = config.port || 3000;
     await connectToRDS();

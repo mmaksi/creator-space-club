@@ -20,7 +20,6 @@ function generateAccessToken(userId: string): string {
 
 async function generateRefreshToken(userId: string): Promise<string> {
     const refreshToken = jwt.sign({ userId, type: 'refresh' }, refreshTokenSecret!, { expiresIn: '7d' });
-    console.warn(refreshToken);
     // add refresh token to the store
     try {
         await db('refreshTokens').insert({
@@ -65,7 +64,6 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function googleSignIn(accessToken: string, refreshToken: string, profile: Profile, done: VerifyCallback) {
-    console.warn(profile);
     // const firstName = profile.name?.givenName;
     // const lastName = profile.name?.familyName;
     // const email = profile.emails![0].value;
@@ -74,10 +72,16 @@ export async function googleSignIn(accessToken: string, refreshToken: string, pr
     // const userId = profile.id;
     try {
         // Check if user already exists
-        const existingUser = await User.findUserBy({ googleId: profile.id });
+        const existingGoogleUser = await User.findUserBy({ googleId: profile.id });
 
-        if (existingUser) {
-            return done(null, existingUser);
+        if (existingGoogleUser) {
+            return done(null, existingGoogleUser);
+        }
+        const existingEmailUser = await User.findUserBy({ email: profile.emails![0].value });
+        if (existingEmailUser && !existingEmailUser.googleId) {
+            // update the user with the google id
+            await User.updateUser(existingEmailUser.id, { googleId: profile.id });
+            return done(null, existingEmailUser);
         }
 
         // If not, create new user
@@ -85,7 +89,7 @@ export async function googleSignIn(accessToken: string, refreshToken: string, pr
             email: profile.emails![0].value,
             googleId: profile.id,
             // Set a random password since it's not used with Google auth
-            password: Math.random().toString(36).slice(-8),
+            password: await Password.toHash(Math.random().toString(36).slice(-8)),
         });
         done(null, newUser);
         // store the profile id in a cookie
@@ -95,8 +99,7 @@ export async function googleSignIn(accessToken: string, refreshToken: string, pr
 }
 
 export async function signOut(refreshToken: string) {
-    if (!refreshToken) throw new UnauthorizedError('Refresh Token missing');
-    await db('refreshTokens').where({ token: refreshToken }).delete();
+    if (refreshToken) await db('refreshTokens').where({ token: refreshToken }).delete();
     return;
 }
 

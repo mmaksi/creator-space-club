@@ -19,7 +19,7 @@ export async function httpSignin(req: Request, res: Response) {
 }
 
 export async function httpGetCurrentUser(req: Request, res: Response) {
-    return res.json({ currentUser: req.currentUser || null });
+    return res.send(req.session);
 }
 
 export async function httpSignOut(req: Request, res: Response) {

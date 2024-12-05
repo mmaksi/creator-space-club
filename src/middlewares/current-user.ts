@@ -4,16 +4,12 @@ import { config } from '../config';
 import { UnauthorizedError } from '../errors/unauthorized.error';
 import { IUser } from '../lib/types';
 
-declare global {
-    namespace Express {
-        interface Request {
-            currentUser?: IUser;
-        }
-    }
-}
-
 export const currentUser = (req: Request, res: Response, next: NextFunction) => {
     if (!req.session?.accessToken) {
+        return next();
+    }
+    // from Passport
+    if (req.user) {
         return next();
     }
     try {
